@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c0e14">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<title>ENESAI</title>
+<style>
+:root{--bg:#0c0e14;--sf:#151926;--ln:#262c40;--tx:#eef0f6;--mt:#8e95ad;--a:#4f8cff}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);overflow:hidden}
+header{display:flex;align-items:center;gap:8px;padding:12px 14px}
+.chips{display:flex;gap:6px;flex:1}
+.chip{border:1px solid var(--ln);background:none;color:var(--mt);padding:7px 14px;border-radius:99px;font:600 14px inherit;font-family:inherit}
+.chip[aria-pressed=true]{color:var(--bg);background:var(--c);border-color:var(--c)}
+.ib{background:none;border:0;color:var(--mt);font-size:22px;padding:6px 8px}
+#log{flex:1;overflow-y:auto;padding:8px 16px;display:flex;flex-direction:column;gap:10px}
+.m{max-width:86%;padding:10px 14px;border-radius:18px;background:var(--sf);white-space:pre-wrap;word-wrap:break-word}
+.m.u{align-self:flex-end;background:var(--a);color:#07101f;border-bottom-right-radius:5px}
+.m.a{border-bottom-left-radius:5px}
+.m img{max-width:100%;border-radius:10px;display:block;margin-bottom:6px}
+.act{display:inline-block;margin:8px 8px 0 0;padding:7px 14px;border-radius:99px;border:1px solid var(--a);color:var(--a);text-decoration:none;font-weight:600;font-size:14px}
+#tm{padding:0 16px;color:var(--mt);font-size:14px;display:flex;gap:12px;flex-wrap:wrap}
+#stage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0 6px}
+#st{color:var(--mt);font-size:14px;min-height:20px;padding:0 20px;text-align:center}
+#orb{width:112px;height:112px;border-radius:50%;border:0;background:radial-gradient(circle at 35% 30%,#fff7,transparent 40%),var(--a);box-shadow:0 0 0 0 var(--a);transition:transform .15s}
+#orb:active{transform:scale(.95)}
+body.on #orb{animation:p 1.6s infinite}
+body.busy #orb{animation:p .7s infinite;filter:saturate(.5)}
+@keyframes p{70%{box-shadow:0 0 0 26px #0000}100%{box-shadow:0 0 0 0 #0000}}
+@media(prefers-reduced-motion:reduce){body.on #orb,body.busy #orb{animation:none}}
+form{display:flex;gap:8px;padding:6px 14px 12px}
+input,textarea{background:var(--sf);border:1px solid var(--ln);color:var(--tx);border-radius:14px;padding:11px 14px;font:inherit;width:100%}
+form input{flex:1}
+:focus-visible{outline:2px solid var(--a);outline-offset:2px}
+dialog{background:var(--sf);color:var(--tx);border:1px solid var(--ln);border-radius:20px;padding:20px;width:min(92vw,420px);margin:auto}
+dialog::backdrop{background:#000a}
+dialog label{display:block;margin:14px 0 6px;color:var(--mt);font-size:14px}
+.btn{background:var(--a);color:#07101f;border:0;border-radius:12px;padding:11px 18px;font:700 15px inherit;font-family:inherit;margin-top:14px}
+.btn.g{background:none;color:var(--mt);border:1px solid var(--ln)}
+#setup{padding:28px 22px;overflow-y:auto}
+#setup h1{font-size:28px;margin-bottom:8px}
+#setup ol{margin:14px 0 18px 20px;color:var(--mt)}
+#setup a{color:var(--a)}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+
+<section id="setup" class="hide">
+  <h1>ENESAI'ye hoş geldin</h1>
+  <p>Seninle sesli konuşan asistan. Hesap ve reklam yok; konuşmaların doğrudan Google'a gider, başka yere gitmez.</p>
+  <ol>
+    <li><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> adresini aç ve Google hesabınla gir.</li>
+    <li>"Create API key" düğmesine bas ve anahtarı kopyala.</li>
+    <li>Aşağıya yapıştır.</li>
+  </ol>
+  <input id="k0" placeholder="Gemini API anahtarı" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <button class="btn" id="k0b">Başla</button>
+</section>
+
+<main id="app" class="hide" style="display:contents">
+  <header>
+    <div class="chips" id="chips"></div>
+    <button class="ib" id="cam" aria-label="Fotoğraf çek veya seç">📷</button>
+    <button class="ib" id="cfg" aria-label="Ayarlar">⚙︎</button>
+  </header>
+  <div id="log" aria-live="polite"></div>
+  <div id="tm"></div>
+  <div id="stage">
+    <div id="st">Dokun ve konuş</div>
+    <button id="orb" aria-label="Dinlemeyi başlat veya durdur"></button>
+  </div>
+  <form id="f"><input id="t" placeholder="Ya da yaz…" autocomplete="off"><button class="btn" style="margin:0">Gönder</button></form>
+</main>
+
+<input type="file" id="file" accept="image/*" capture="environment" class="hide">
+
+<dialog id="dlg">
+  <h2>Ayarlar</h2>
+  <label for="k1">Gemini API anahtarı</label>
+  <input id="k1" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <label for="nm">Adın</label>
+  <input id="nm" placeholder="Sana nasıl hitap edeyim?">
+  <label><input type="checkbox" id="lp" style="width:auto;margin-right:8px">Cevaptan sonra otomatik dinle</label>
+  <button class="btn" id="sv">Kaydet</button>
+  <button class="btn g" id="cm">Hafızayı sil</button>
+  <button class="btn g" id="cl">Kapat</button>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const CH=[
+ {n:'ENESAI',c:'#4f8cff',p:1,r:1,t:'Kibar, ölçülü ve profesyonel konuş.'},
+ {n:'ASENA',c:'#ff5c8a',p:1.25,r:1.12,t:'Samimi, enerjik ve esprili konuş.'},
+ {n:'OMEGA',c:'#9aa0b4',p:.7,r:.95,t:'Soğuk, kısa ve kendine has bir tavırla konuş.'}];
+let S=JSON.parse(localStorage.getItem('alpai')||'{}');
+S.key=S.key||'';S.ch=S.ch||0;S.mem=S.mem||[];S.name=S.name||'';S.loop=S.loop!==false;
+const save=()=>localStorage.setItem('alpai',JSON.stringify(S));
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec,on=false,listening=false,busy=false,hist=[],timers=[];
+
+/* ---------- UI ---------- */
+function paint(){
+  const c=CH[S.ch];document.documentElement.style.setProperty('--a',c.c);
+  $('#chips').innerHTML='';
+  CH.forEach((x,i)=>{const b=document.createElement('button');b.className='chip';b.textContent=x.n;b.style.setProperty('--c',x.c);
+    b.setAttribute('aria-pressed',i===S.ch);b.onclick=()=>{S.ch=i;save();paint();say('Ben '+x.n)};$('#chips').append(b)});
+}
+function ui(){document.body.classList.toggle('on',on&&listening);document.body.classList.toggle('busy',busy);
+  if(!listening&&!busy)$('#st').textContent=on?'Bekliyorum…':'Dokun ve konuş';
+  if(busy)$('#st').textContent='Düşünüyorum…'}
+function add(who,text,img,acts){
+  const d=document.createElement('div');d.className='m '+who;
+  if(img){const i=new Image();i.src=img;d.append(i)}
+  d.append(document.createTextNode(text));
+  (acts||[]).forEach(a=>{const l=document.createElement('a');l.className='act';l.href=a.href;l.target='_blank';l.rel='noopener';l.textContent=a.label;d.append(l)});
+  $('#log').append(d);$('#log').scrollTop=1e9;
+}
+function renderT(){$('#tm').innerHTML='';timers.forEach(t=>{const s=document.createElement('span');
+  s.textContent='⏱ '+t.label+' · '+Math.max(0,Math.round((t.end-Date.now())/1000))+' sn';$('#tm').append(s)})}
+setInterval(()=>timers.length&&renderT(),1000);
+
+/* ---------- speech ---------- */
+function clean(t){return t.replace(/[*_#`>]/g,'').replace(/https?:\/\/\S+/g,'')}
+function say(text,after){
+  speechSynthesis.cancel();const c=CH[S.ch];
+  const u=new SpeechSynthesisUtterance(clean(text));u.lang='tr-TR';u.pitch=c.p;u.rate=c.r;
+  const v=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.toLowerCase().startsWith('tr'));if(v)u.voice=v;
+  u.onend=u.onerror=()=>{after&&after()};speechSynthesis.speak(u);
+}
+function listen(){
+  if(!SR){$('#st').textContent='Bu tarayıcıda sesli giriş yok. Chrome kullan ya da yaz.';return}
+  if(listening||busy||speechSynthesis.speaking)return;
+  rec=new SR();rec.lang='tr-TR';rec.interimResults=true;let fin='';
+  rec.onstart=()=>{listening=true;ui()};
+  rec.onresult=e=>{fin=[...e.results].map(r=>r[0].transcript).join('');$('#st').textContent=fin};
+  rec.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){on=false;$('#st').textContent='Mikrofon iznini aç'}};
+  rec.onend=()=>{listening=false;ui();if(fin.trim())send(fin.trim());else if(on)setTimeout(listen,500)};
+  try{rec.start()}catch(e){}
+}
+function again(){busy=false;ui();if(on&&S.loop)setTimeout(listen,400)}
+$('#orb').onclick=()=>{
+  if('Notification'in window&&Notification.permission==='default')Notification.requestPermission();
+  if(on){on=false;try{rec&&rec.abort()}catch(e){}speechSynthesis.cancel();listening=false;busy=false;ui()}
+  else{on=true;listen()}
+};
+
+/* ---------- Gemini ---------- */
+function sys(){
+  const c=CH[S.ch];
+  return `Sen ${c.n} adlı, telefonda yaşayan sesli bir kişisel asistansın. ${c.t} Türkçe, kısa ve konuşma diliyle cevap ver (en fazla 3 cümle); cevapların sesli okunacak, bu yüzden madde işareti, emoji, başlık ve link yazma. Güncel bilgi gerektiğinde internette ara.
+Şu an: ${new Date().toLocaleString('tr-TR',{dateStyle:'full',timeStyle:'short'})}.${S.name?' Kullanıcının adı: '+S.name+'.':''}
+Hafıza: ${S.mem.length?S.mem.join('; '):'(boş)'}
+Bir işlem gerektiğinde cevabının sonuna şu etiketlerden birini veya birkaçını ekle:
+[[TIMER:saniye|etiket]] zamanlayıcı/geri sayım için.
+[[REMEMBER:bilgi]] kullanıcı kalıcı bir bilgi söylediğinde (isim, tercih).
+[[CALL:telefon]] arama, [[SMS:telefon|mesaj]] mesaj, [[WA:telefon|mesaj]] WhatsApp (telefon uluslararası biçimde, rakamlarla; bilmiyorsan boş bırak ve kullanıcıya sor).
+[[MAP:yer veya yol tarifi hedefi]] harita.
+[[EVENT:başlık|YYYYMMDDTHHMMSS]] takvim/anımsatıcı.
+Mesaj ve arama kullanıcı onayıyla yapılır; "hazırladım, düğmeye dokun" de.`;
+}
+async function send(text,img){
+  busy=true;ui();add('u',text,img);
+  const parts=[{text}];if(img)parts.push({inline_data:{mime_type:'image/jpeg',data:img.split(',')[1]}});
+  try{
+    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',{
+      method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':S.key},
+      body:JSON.stringify({systemInstruction:{parts:[{text:sys()}]},contents:[...hist,{role:'user',parts}],tools:[{google_search:{}}]})});
+    const j=await r.json();if(!r.ok)throw new Error(j.error?.message||r.status);
+    const out=(j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('').trim();
+    if(!out)throw new Error('Boş cevap geldi');
+    hist.push({role:'user',parts:[{text}]},{role:'model',parts:[{text:out}]});hist=hist.slice(-24);
+    reply(out);
+  }catch(e){add('a','Hata: '+e.message+(/API key|permission|401|403/i.test(e.message)?'\nAnahtarı Ayarlar\'dan kontrol et.':''));again()}
+}
+function reply(raw){
+  const acts=[];
+  const txt=raw.replace(/\[\[(\w+):([^\]]*)\]\]/g,(_,k,v)=>{
+    const [a,b=''] = v.split('|');const d=a.replace(/[^\d+]/g,''),q=encodeURIComponent;
+    if(k==='TIMER'&&+a>0)timer(+a,b||'Zamanlayıcı');
+    else if(k==='REMEMBER'){S.mem.push(v.trim());S.mem=S.mem.slice(-40);save()}
+    else if(k==='CALL'&&d)acts.push({label:'📞 Ara '+d,href:'tel:'+d});
+    else if(k==='SMS')acts.push({label:'💬 Mesajı aç',href:'sms:'+d+'?body='+q(b)});
+    else if(k==='WA')acts.push({label:'WhatsApp\'ta aç',href:'https://wa.me/'+d.replace('+','')+'?text='+q(b)});
+    else if(k==='MAP')acts.push({label:'🗺 Haritada aç',href:'https://www.google.com/maps/dir/?api=1&destination='+q(v)});
+    else if(k==='EVENT'&&/^\d{8}T\d{6}$/.test(b.trim()))acts.push({label:'📅 Takvime ekle',href:'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+q(a)+'&dates='+b.trim()+'/'+b.trim()});
+    return '';
+  }).trim();
+  add('a',txt,null,acts);speechSynthesis.getVoices();
+  say(txt,again);
+}
+function timer(sec,label){
+  const t={end:Date.now()+sec*1000,label};timers.push(t);renderT();
+  setTimeout(()=>{timers=timers.filter(x=>x!==t);renderT();beep();
+    navigator.serviceWorker?.ready.then(r=>Notification.permission==='granted'&&r.showNotification('ENESAI',{body:label+' süresi doldu',vibrate:[300,100,300]})).catch(()=>{});
+    add('a','⏱ '+label+' süresi doldu');say(label+' süresi doldu')},sec*1000);
+}
+function beep(){try{const a=new AudioContext(),o=a.createOscillator();o.connect(a.destination);o.frequency.value=880;o.start();o.stop(a.currentTime+.5)}catch(e){}}
+
+/* ---------- inputs ---------- */
+$('#f').onsubmit=e=>{e.preventDefault();const v=$('#t').value.trim();if(v&&!busy){$('#t').value='';send(v)}};
+$('#cam').onclick=()=>$('#file').click();
+$('#file').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;e.target.value='';
+  const im=new Image();im.onload=()=>{const s=Math.min(1,1024/Math.max(im.width,im.height)),c=document.createElement('canvas');
+    c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+    send($('#t').value.trim()||'Bu fotoğrafta ne görüyorsun?',c.toDataURL('image/jpeg',.8));$('#t').value=''};
+  im.src=URL.createObjectURL(f);
+};
+
+/* ---------- settings / setup ---------- */
+$('#cfg').onclick=()=>{$('#k1').value=S.key;$('#nm').value=S.name;$('#lp').checked=S.loop;$('#dlg').showModal()};
+$('#cl').onclick=()=>$('#dlg').close();
+$('#sv').onclick=()=>{S.key=$('#k1').value.trim();S.name=$('#nm').value.trim();S.loop=$('#lp').checked;save();$('#dlg').close()};
+$('#cm').onclick=()=>{S.mem=[];save();$('#dlg').close();add('a','Hafızayı sildim.')};
+$('#k0b').onclick=()=>{const v=$('#k0').value.trim();if(v.length>20){S.key=v;save();start()}};
+function start(){
+  $('#setup').classList.toggle('hide',!!S.key);$('#app').classList.toggle('hide',!S.key);
+  if(S.key){paint();if(!$('#log').children.length)add('a','Merhaba'+(S.name?' '+S.name:'')+'. Ben '+CH[S.ch].n+'. Dokun ve konuş.')}
+}
+start();
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
