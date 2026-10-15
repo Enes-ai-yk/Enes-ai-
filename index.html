@@ -83,6 +83,8 @@ dialog label{display:block;margin:14px 0 6px;color:var(--mt);font-size:14px}
   <h2>Ayarlar</h2>
   <label for="k1">Gemini API anahtarı</label>
   <input id="k1" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <label for="md">Model</label>
+  <input id="md" autocomplete="off" autocapitalize="off" spellcheck="false">
   <label for="nm">Adın</label>
   <input id="nm" placeholder="Sana nasıl hitap edeyim?">
   <label><input type="checkbox" id="lp" style="width:auto;margin-right:8px">Cevaptan sonra otomatik dinle</label>
@@ -98,7 +100,7 @@ const CH=[
  {n:'ASENA',c:'#ff5c8a',p:1.25,r:1.12,t:'Samimi, enerjik ve esprili konuş.'},
  {n:'OMEGA',c:'#9aa0b4',p:.7,r:.95,t:'Soğuk, kısa ve kendine has bir tavırla konuş.'}];
 let S=JSON.parse(localStorage.getItem('alpai')||'{}');
-S.key=S.key||'';S.ch=S.ch||0;S.mem=S.mem||[];S.name=S.name||'';S.loop=S.loop!==false;
+S.key=S.key||'';S.ch=S.ch||0;S.mem=S.mem||[];S.name=S.name||'';S.loop=S.loop!==false;S.model=S.model||'gemini-3.8-flash';
 const save=()=>localStorage.setItem('alpai',JSON.stringify(S));
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let rec,on=false,listening=false,busy=false,hist=[],timers=[];
@@ -167,7 +169,7 @@ async function send(text,img){
   busy=true;ui();add('u',text,img);
   const parts=[{text}];if(img)parts.push({inline_data:{mime_type:'image/jpeg',data:img.split(',')[1]}});
   try{
-    const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',{
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${S.model}:generateContent`,{
       method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':S.key},
       body:JSON.stringify({systemInstruction:{parts:[{text:sys()}]},contents:[...hist,{role:'user',parts}],tools:[{google_search:{}}]})});
     const j=await r.json();if(!r.ok)throw new Error(j.error?.message||r.status);
@@ -213,9 +215,9 @@ $('#file').onchange=e=>{
 };
 
 /* ---------- settings / setup ---------- */
-$('#cfg').onclick=()=>{$('#k1').value=S.key;$('#nm').value=S.name;$('#lp').checked=S.loop;$('#dlg').showModal()};
+$('#cfg').onclick=()=>{$('#k1').value=S.key;$('#nm').value=S.name;$('#md').value=S.model;$('#lp').checked=S.loop;$('#dlg').showModal()};
 $('#cl').onclick=()=>$('#dlg').close();
-$('#sv').onclick=()=>{S.key=$('#k1').value.trim();S.name=$('#nm').value.trim();S.loop=$('#lp').checked;save();$('#dlg').close()};
+$('#sv').onclick=()=>{S.key=$('#k1').value.trim();S.name=$('#nm').value.trim();S.model=$('#md').value.trim()||'gemini-3.8-flash';S.loop=$('#lp').checked;save();$('#dlg').close()};
 $('#cm').onclick=()=>{S.mem=[];save();$('#dlg').close();add('a','Hafızayı sildim.')};
 $('#k0b').onclick=()=>{const v=$('#k0').value.trim();if(v.length>20){S.key=v;save();start()}};
 function start(){
